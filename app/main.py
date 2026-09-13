@@ -11,9 +11,11 @@ Then:
 """
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.schemas import ChatRequest, ChatResponse, HealthResponse
 from src.pipeline import run_pipeline
@@ -93,3 +95,10 @@ def chat(req: ChatRequest):
         low_confidence_retrieval=result.low_confidence_retrieval,
         retrieved_categories=result.retrieved_categories,
     )
+
+
+# Mounted last and at "/" so it only catches requests that don't match
+# /chat or /health above -- serves the chat UI at http://localhost:8000/.
+_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+if _FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIR), html=True), name="frontend")
