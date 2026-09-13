@@ -84,6 +84,8 @@ FINE_TO_COARSE_INTENT = {
     "switch_account": "account_management",
     "recover_password": "account_management",
     "registration_problems": "account_management",
+    "feedback": "feedback",
+    "compliment": "feedback",
     "complaint": "complaint",
     "review": "complaint",
     "contact_customer_service": "complaint",
@@ -91,7 +93,7 @@ FINE_TO_COARSE_INTENT = {
     "newsletter_subscription": "out_of_scope",
     "set_up_shipping_address": "order_management",
 }
-COARSE_INTENTS = sorted(set(FINE_TO_COARSE_INTENT.values()) | {"out_of_scope"})
+COARSE_INTENTS = sorted(set[str](FINE_TO_COARSE_INTENT.values()) | {"out_of_scope", "feedback"})
 
 # --- RAG ----------------------------------------------------------------
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"

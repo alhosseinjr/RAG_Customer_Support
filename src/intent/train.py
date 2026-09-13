@@ -51,6 +51,21 @@ OUT_OF_SCOPE_EXAMPLES = [
     "What time is it in Tokyo?",
 ]
 
+POSITIVE_FEEDBACK_EXAMPLES = [
+    "I'm happy with my order",
+    "The product quality is excellent",
+    "I'm very satisfied with my purchase",
+    "Great service, thank you!",
+    "The material is really good",
+    "I love the product!",
+    "Everything arrived in perfect condition",
+    "Very happy customer here!",
+    "The item exceeded my expectations",
+    "Fantastic quality, will order again",
+    "I'm pleased with my order",
+    "The product is exactly what I wanted",
+]
+
 
 def load_data() -> pd.DataFrame:
     log.info("Loading %s ...", config.INTENT_DATASET)
@@ -59,16 +74,18 @@ def load_data() -> pd.DataFrame:
         columns={"instruction": "text"}
     )
     df["coarse_intent"] = df["intent"].map(config.FINE_TO_COARSE_INTENT)
-
     unmapped = df[df["coarse_intent"].isna()]["intent"].unique()
     if len(unmapped):
         log.warning("Unmapped fine intents (dropped): %s", unmapped)
     df = df.dropna(subset=["coarse_intent"])
-
+    
     oos_df = pd.DataFrame(
         {"text": OUT_OF_SCOPE_EXAMPLES, "intent": "out_of_scope", "coarse_intent": "out_of_scope"}
     )
-    return pd.concat([df, oos_df], ignore_index=True)
+    feedback_df = pd.DataFrame(
+        {"text": POSITIVE_FEEDBACK_EXAMPLES, "intent": "feedback", "coarse_intent": "feedback"}
+    )
+    return pd.concat([df, oos_df, feedback_df], ignore_index=True)
 
 
 def build_pipeline() -> Pipeline:
