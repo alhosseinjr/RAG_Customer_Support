@@ -23,6 +23,16 @@ LANG_MODEL_PATH = MODELS_DIR / "language_detector.joblib"
 LANG_VECTORIZER_PATH = MODELS_DIR / "language_vectorizer.joblib"
 LANG_DATASET = "papluca/language-identification"
 
+# Below this confidence, the language prediction is treated as unreliable
+# and the pipeline defaults to English rather than trusting it. Short,
+# generic phrases ("How can you help me?", "ok", "thanks") often don't
+# have enough distinctive character n-grams for the classifier to be
+# confident, and a wrong non-English guess triggers a costly, garbled
+# failure mode: translating an English message to a wrong language and
+# back through the LLM twice. English is the safe default for this KB
+# and customer base; tune if your actual traffic skews non-English.
+LANG_MIN_CONFIDENCE = 0.5
+
 # --- Sentiment ------------------------------------------------------------
 SENTIMENT_MODEL_PATH = MODELS_DIR / "sentiment_bilstm.keras"
 SENTIMENT_TOKENIZER_PATH = MODELS_DIR / "sentiment_tokenizer.joblib"

@@ -131,6 +131,21 @@ def test_model_self_flagged_escalation_overrides_high_similarity_score(*_mocks):
     assert result.escalate is True
 
 
+@patch("src.pipeline.translate", side_effect=lambda text, lang: text)
+@patch("src.pipeline.predict_intent", return_value="order_status")
+@patch("src.pipeline.predict_sentiment", return_value=("neutral", 0.7))
+@patch("src.pipeline.detect_language", return_value=("sw", 0.22))
+def test_low_confidence_language_defaults_to_english(*_mocks):
+    """A low-confidence language guess on a short/generic English phrase
+    shouldn't trigger a translate-to-wrong-language-and-back round trip --
+    this reproduces the exact bug found in live testing, where 'How can
+    you help me?' got misdetected as Swahili at 0.22 confidence."""
+    with patch("src.pipeline.retrieve", return_value=[_mock_chunk()]):
+        with patch("src.pipeline.generate_answer", return_value=("Sure, I can help.", False)):
+            result = run_pipeline("How can you help me?")
+    assert result.detected_language == "en"
+
+
 def test_coarse_intent_mapping_has_no_orphan_targets():
     """Every mapped coarse intent must be one of the 7 documented categories."""
     expected = {

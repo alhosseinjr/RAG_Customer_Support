@@ -66,6 +66,11 @@ class PipelineResult:
 def run_pipeline(user_message: str) -> PipelineResult:
     # Stage 1: language
     lang, lang_conf = detect_language(user_message)
+    if lang_conf < config.LANG_MIN_CONFIDENCE:
+        # Low-confidence prediction (common on short/generic phrases) --
+        # defaulting to English avoids garbling an English message through
+        # an unnecessary translate-to-wrong-language-and-back round trip.
+        lang = "en"
 
     # Stage 2: sentiment (always run on the original text)
     sentiment, sent_conf = predict_sentiment(user_message)
