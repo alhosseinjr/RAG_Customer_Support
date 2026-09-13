@@ -90,5 +90,6 @@ def chat(req: ChatRequest):
         intent=result.intent,
         escalate=result.escalate,
         used_rag=result.used_rag,
+        low_confidence_retrieval=result.low_confidence_retrieval,
         retrieved_categories=result.retrieved_categories,
     )

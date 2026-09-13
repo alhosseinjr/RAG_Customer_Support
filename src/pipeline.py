@@ -28,6 +28,7 @@ sentiment and intent are independent signals and either can trigger it.
 """
 from dataclasses import dataclass, field
 
+from src import config
 from src.intent.predict import predict_intent
 from src.language_detection.predict import detect_language
 from src.rag.generator import generate_answer, translate
@@ -58,6 +59,7 @@ class PipelineResult:
     intent: str
     escalate: bool
     used_rag: bool
+    low_confidence_retrieval: bool = False
     retrieved_categories: list[str] = field(default_factory=list)
 
 
@@ -74,19 +76,42 @@ def run_pipeline(user_message: str) -> PipelineResult:
     # Stage 3: intent
     intent = predict_intent(message_en)
 
-    escalate = intent == "complaint" or sentiment == "negative"
+    # Escalation has two independent triggers, tracked separately so the
+    # response tone matches the actual reason: sentiment/complaint means
+    # the *customer* is upset; weak retrieval means the *bot* doesn't
+    # actually have a good answer. Conflating them would put an apology
+    # for "trouble this has caused" on a plain question the bot simply
+    # couldn't match well, which reads as a non-sequitur.
+    needs_apology = intent == "complaint" or sentiment == "negative"
+    low_confidence_retrieval = False
 
     # Stage 4: routing
     if intent in CANNED_RESPONSES:
         response_en = CANNED_RESPONSES[intent]
         used_rag = False
         categories: list[str] = []
+        escalate = needs_apology
     else:
         chunks = retrieve(message_en)
-        response_en = generate_answer(message_en, chunks, detected_sentiment=sentiment)
+        weak_score = (not chunks) or (chunks[0].score < config.RAG_MIN_CONFIDENCE)
+
+        response_en, model_flagged_escalate = generate_answer(
+            message_en, chunks, detected_sentiment=sentiment
+        )
+        # Combine two signals: a cheap embedding-similarity pre-check, and
+        # the LLM's own judgment of whether it actually answered the
+        # question. The two catch different failure modes -- weak_score
+        # catches "nothing remotely relevant was retrieved" cheaply
+        # without even needing the LLM call to admit it; model_flagged_
+        # escalate catches "retrieved chunk was topically close but not
+        # actually responsive" (e.g. "place order" vs "track order"),
+        # which cosine similarity alone can't reliably distinguish.
+        low_confidence_retrieval = weak_score or model_flagged_escalate
+        escalate = needs_apology or low_confidence_retrieval
+
         used_rag = True
         categories = [c.category for c in chunks]
-        if escalate:
+        if needs_apology:
             response_en = APOLOGY_PREFIX + response_en
 
     final_response = response_en if lang == "en" else translate(response_en, lang)
@@ -100,6 +125,7 @@ def run_pipeline(user_message: str) -> PipelineResult:
         intent=intent,
         escalate=escalate,
         used_rag=used_rag,
+        low_confidence_retrieval=low_confidence_retrieval,
         retrieved_categories=categories,
     )
 

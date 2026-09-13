@@ -15,6 +15,7 @@ class ChatResponse(BaseModel):
     intent: str
     escalate: bool
     used_rag: bool
+    low_confidence_retrieval: bool
     retrieved_categories: list[str]
 
 

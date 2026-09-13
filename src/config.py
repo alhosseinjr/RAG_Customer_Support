@@ -89,6 +89,16 @@ FAISS_INDEX_PATH = MODELS_DIR / "faiss_index" / "kb.index"
 FAISS_METADATA_PATH = MODELS_DIR / "faiss_index" / "kb_metadata.joblib"
 RAG_TOP_K = 3
 
+# Below this cosine similarity, the top retrieved chunk is treated as an
+# unreliable match rather than a real answer -- e.g. a genuine RAG hit on
+# "how to place an order" scoring against an "order status" question,
+# which is topically close but not actually responsive. Escalates to a
+# human even when intent/sentiment look fine. Calibrated loosely against
+# all-MiniLM-L6-v2 cosine scores on this KB; tune after watching real
+# queries -- if false-escalations are common, raise it; if genuinely bad
+# answers are getting through, lower it.
+RAG_MIN_CONFIDENCE = 0.45
+
 # --- LLM (Groq) -----------------------------------------------------------
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
@@ -97,5 +107,9 @@ RAG_SYSTEM_PROMPT = """You are a helpful, professional customer support assistan
 for an online retailer. Answer the customer's question using ONLY the information \
 in the retrieved support responses below. If the customer sounds frustrated \
 ({detected_sentiment}), acknowledge that before answering. If the retrieved \
-context does not cover the question, say so honestly and offer to escalate to a \
-human agent rather than guessing."""
+context does not actually answer the customer's specific question -- even if it \
+looks topically related -- say so honestly and offer to escalate to a human agent \
+rather than guessing or stretching an unrelated answer to fit. In that case, end \
+your reply on its own new line with exactly the token [ESCALATE_TO_HUMAN] and \
+nothing else on that line. Only include this token when the context genuinely \
+doesn't answer the question -- do not include it when you were able to help."""

@@ -52,8 +52,6 @@ def build_pipeline() -> Pipeline:
                 LogisticRegression(
                     max_iter=1000,
                     C=5.0,
-                    n_jobs=-1,
-                    multi_class="multinomial",
                 ),
             ),
         ]

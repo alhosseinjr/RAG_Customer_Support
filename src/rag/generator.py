@@ -59,12 +59,20 @@ def generate_answer(
     user_message_en: str,
     chunks: list[RetrievedChunk],
     detected_sentiment: str,
-) -> str:
-    """Generate a grounded answer in English from retrieved KB chunks."""
+) -> tuple[str, bool]:
+    """Generate a grounded answer in English from retrieved KB chunks.
+
+    Returns (answer_text, model_flagged_escalate). The second value is
+    True when the LLM itself judged the retrieved context didn't actually
+    answer the question -- a more reliable signal than a raw embedding
+    similarity threshold, since a chunk can be topically close (e.g. "how
+    do I place an order" vs "where is my order") without being responsive.
+    """
     if not chunks:
         return (
             "I don't have information on that in our support knowledge base, so "
-            "I don't want to guess. I'm escalating this to a human agent who can help."
+            "I don't want to guess. I'm escalating this to a human agent who can help.",
+            True,
         )
 
     context = "\n\n".join(
@@ -76,12 +84,17 @@ def generate_answer(
         f"Context (retrieved past support responses):\n\n{context}\n\n"
         f'Customer question: "{user_message_en}"'
     )
-    return _chat(system, user_prompt)
+    raw = _chat(system, user_prompt)
+
+    model_flagged_escalate = "[ESCALATE_TO_HUMAN]" in raw
+    clean_text = raw.replace("[ESCALATE_TO_HUMAN]", "").strip()
+    return clean_text, model_flagged_escalate
 
 
 if __name__ == "__main__":
     from src.rag.retriever import retrieve
 
     q = "How do I cancel my order?"
-    answer = generate_answer(q, retrieve(q), detected_sentiment="neutral")
+    answer, flagged = generate_answer(q, retrieve(q), detected_sentiment="neutral")
     print(answer)
+    print("model_flagged_escalate:", flagged)

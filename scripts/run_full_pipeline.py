@@ -11,6 +11,8 @@ are simply overwritten, nothing is corrupted by a partial run.
 import logging
 import sys
 import time
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
 log = logging.getLogger(__name__)
